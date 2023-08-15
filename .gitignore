@@ -160,6 +160,7 @@ cython_debug/
 #.idea/
 
 # additional
+*.code-workspace
 data
 conda_aqi_forecast
 mamba_aqi_forecast
