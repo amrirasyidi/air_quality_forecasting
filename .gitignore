@@ -163,4 +163,4 @@ cython_debug/
 *.code-workspace
 data
 conda_aqi_forecast
-mamba_aqi_forecast
+references
