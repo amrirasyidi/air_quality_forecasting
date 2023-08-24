@@ -7,13 +7,13 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.use_cuda = args.cuda
         self.P = args.window
-        self.m = data.m
-        self.hidR = args.hidRNN
-        self.hidC = args.hidCNN
+        self.m = data.m # num_features
+        self.hidR = args.hidRNN # recc1_out_channels
+        self.hidC = args.hidCNN # conv1_out_channels
         self.hidS = args.hidSkip
-        self.Ck = args.CNN_kernel
+        self.Ck = args.CNN_kernel # conv1_kernel_height
         self.skip = args.skip
-        self.pt = (self.P - self.Ck)/self.skip
+        self.pt = (self.P - self.Ck)/self.skip # skip_sequence_len
         self.hw = args.highway_window
         self.conv1 = nn.Conv2d(1, self.hidC, kernel_size = (self.Ck, self.m))
         self.GRU1 = nn.GRU(self.hidC, self.hidR)
