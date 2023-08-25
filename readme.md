@@ -17,10 +17,10 @@ weight_decay = 0.01
 ```
 
 The testing model perform quite well on the first x hours of the forecasting as can be seen in the graph below:
-![Forecasting Result](notebooks\images\prediction_result_100_hour.png "Prediction of first 100 hour")
-
 ![Forecasting Result](notebooks\images\prediction_result_24_hour.png "Prediction of first 24 hour")
+
+![Forecasting Result](notebooks\images\prediction_result_100_hour.png "Prediction of first 100 hour")
 
 ## epa_tw exploration
 
-
+tbd
