@@ -7,6 +7,8 @@ import glob
 from typing import List
 import pandas as pd
 from dateutil import parser
+import torch
+from torch.utils.data import Dataset, DataLoader
 
 root_dir = pathlib.Path(os.getcwd()).parent
 raw_data_dir = root_dir / "data/0_raw"
@@ -74,3 +76,27 @@ def standardize_df(
     # sort the dataframe based on read_time
     df = df.sort_values(by="read_time")
     return df
+
+class AqiDataset(Dataset):
+    def __init__(self, data, history_len, col_names, device):
+        self.data = data
+        self.history_len = history_len
+        self.col_names = col_names
+        self.device = device
+        
+    def __len__(self):
+        self.len = len(self.data) - self.history_len
+        return self.len
+    
+    def __getitem__(self, index):
+        x_cols = self.col_names
+        y_cols = ['pm2.5_normalized']
+        x = self.data.iloc[index: index+self.history_len, :][x_cols].values
+        y = self.data.iloc[index+self.history_len, :][y_cols].values.astype('float')
+        if self.device:
+            x = torch.tensor(x).float().to(self.device)
+            y = torch.tensor(y).float().to(self.device)
+        else:
+            x = torch.tensor(x).float()
+            y = torch.tensor(y).float()
+        return x, y
