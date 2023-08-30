@@ -1,14 +1,16 @@
 """
 Contains functions for training and testing a PyTorch model.
 """
+import numpy as np
 import torch
+from torch.utils.tensorboard import SummaryWriter
 
 from tqdm.auto import tqdm
 from typing import Dict, List, Tuple
 
-def train_step(model: torch.nn.Module, 
-               dataloader: torch.utils.data.DataLoader, 
-               loss_fn: torch.nn.Module, 
+def train_step(model: torch.nn.Module,
+               dataloader: torch.utils.data.DataLoader,
+               loss_fn: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                device: torch.device) -> Tuple[float, float]:
     """Trains a PyTorch model for a single epoch.
@@ -33,8 +35,9 @@ def train_step(model: torch.nn.Module,
     # Put model in train mode
     model.train()
 
-    # Setup train loss and train accuracy values
-    train_loss_list = []
+    # Setup train loss values
+    train_running_loss_list = [] # list of loss values on a certain epoch
+    epoch_avg_train_loss = [] # list of avg loss values from a certain epoch
     epoch_train_loss = 0
 
     # Loop through data loader data batches
@@ -50,6 +53,7 @@ def train_step(model: torch.nn.Module,
 
         # 2. Calculate  and accumulate loss
         loss = loss_fn(y_pred, y)
+        train_running_loss_list.append(loss.item())
         epoch_train_loss += loss.item()
 
         # 4. Loss backward
@@ -58,10 +62,10 @@ def train_step(model: torch.nn.Module,
         # 5. Optimizer step
         optimizer.step()
 
-    # Adjust metrics to get average loss and accuracy per batch 
+    # Adjust metrics to get average loss per batch
     epoch_train_loss = epoch_train_loss / len(dataloader)
-    train_loss_list.append(epoch_train_loss)
-    return train_loss_list, epoch_train_loss
+    epoch_avg_train_loss.append(epoch_train_loss)
+    return epoch_avg_train_loss, train_running_loss_list
 
 def test_step(model: torch.nn.Module, 
               dataloader: torch.utils.data.DataLoader, 
@@ -85,10 +89,11 @@ def test_step(model: torch.nn.Module,
     (0.0223, 0.8985)
     """
     # Put model in eval mode
-    model.eval() 
+    model.eval()
 
-    # Setup test loss and test accuracy values
-    test_loss_list = []
+    # Setup test loss values
+    test_running_loss_list = [] # list of loss values on a certain epoch
+    epoch_avg_test_loss = [] # list of avg loss values from a certain epoch
     epoch_test_loss = 0
 
     # Turn on inference context manager
@@ -103,22 +108,23 @@ def test_step(model: torch.nn.Module,
 
             # 2. Calculate and accumulate loss
             loss = loss_fn(test_pred_logits, y)
+            test_running_loss_list.append(loss.item())
             epoch_test_loss += loss.item()
 
-    # Adjust metrics to get average loss and accuracy per batch 
+    # Adjust metrics to get average loss per batch
     epoch_test_loss = epoch_test_loss / len(dataloader)
-    test_loss_list.append(epoch_test_loss)
-    return test_loss_list, epoch_test_loss
+    epoch_avg_test_loss.append(epoch_test_loss)
+    return epoch_avg_test_loss, test_running_loss_list
 
 def train(
     model: torch.nn.Module, 
-    train_dataloader: torch.utils.data.DataLoader, 
-    test_dataloader: torch.utils.data.DataLoader, 
+    train_dataloader: torch.utils.data.DataLoader,
+    test_dataloader: torch.utils.data.DataLoader,
     optimizer: torch.optim.Optimizer,
     loss_fn: torch.nn.Module,
     epochs: int,
     device: torch.device,
-    writer: torch.utils.tensorboard.writer.SummaryWriter # new parameter to take in a writer
+    writer: SummaryWriter # new parameter to take in a writer
     ) -> Dict[str, List]:
     """Trains and tests a PyTorch model.
 
@@ -156,32 +162,36 @@ def train(
 
     # Loop through training and testing steps for a number of epochs
     for epoch in tqdm(range(epochs)):
-        train_loss_list, _ = train_step(
+        epoch_avg_train_loss, _ = train_step(
             model=model,
             dataloader=train_dataloader,
             loss_fn=loss_fn,
             optimizer=optimizer,
             device=device
             )
-        test_loss_list, _ = test_step(
+        epoch_avg_test_loss, _ = test_step(
             model=model,
             dataloader=test_dataloader,
             loss_fn=loss_fn,
             device=device
             )
-        
+
         ### New: Use the writer parameter to track experiments ###
         # See if there's a writer, if so, log to it
         if writer:
             # Add results to SummaryWriter
-            writer.add_scalars(main_tag="Loss",
-                               tag_scalar_dict={"train_loss": train_loss_list,
-                                                "test_loss": test_loss_list},
-                               global_step=epoch)
+            writer.add_scalars(
+                main_tag="Loss",
+                tag_scalar_dict=
+                {
+                    "train_loss": np.array(epoch_avg_train_loss),
+                    "test_loss": np.array(epoch_avg_test_loss)
+                },
+                global_step=epoch)
             # Close the writer
             writer.close()
         else:
             pass
 
     # Return the filled results at the end of the epochs
-    return results
+    return epoch_avg_train_loss, epoch_avg_test_loss
