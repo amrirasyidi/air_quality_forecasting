@@ -123,7 +123,9 @@ def train(
     optimizer: torch.optim.Optimizer,
     loss_fn: torch.nn.Module,
     epochs: int,
-    device: torch.device
+    device: torch.device,
+    train_tracker_dir: str,
+    test_tracker_dir: str
     ) -> Dict[str, List]:
     """Trains and tests a PyTorch model.
 
@@ -177,9 +179,16 @@ def train(
 
         print(
             f"Epoch: {epoch+1} | "
-            f"train_loss: {epoch_avg_train_loss:.4f} | "
-            f"test_loss: {epoch_avg_test_loss:.4f} | "
+            f"train_loss: {epoch_avg_train_loss[0]:.4f} | "
+            f"test_loss: {epoch_avg_test_loss[0]:.4f} | "
         )
+        
+        if train_tracker_dir:
+            with open(train_tracker_dir, 'a+') as file:
+                file.write(f'{epoch_avg_train_loss[0]}\n')
+        if test_tracker_dir:
+            with open(test_tracker_dir, 'a+') as file:
+                file.write(f'{epoch_avg_test_loss[0]}\n')
 
     # Return the filled results at the end of the epochs
     return epoch_avg_train_loss, epoch_avg_test_loss
