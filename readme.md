@@ -24,3 +24,9 @@ The testing model perform quite well on the first x hours of the forecasting as 
 ## epa_tw exploration
 
 tbd
+
+## Envs
+Create yml file
+`conda env export --no-builds | findstr -v "prefix" > environment.yml`
+
+Install from yml file

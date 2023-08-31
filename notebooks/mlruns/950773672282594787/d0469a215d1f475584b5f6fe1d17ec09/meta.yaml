@@ -1,0 +1,15 @@
+artifact_uri: file:///d:/0_amri_local/11_aqi_forecast/notebooks/mlruns/950773672282594787/d0469a215d1f475584b5f6fe1d17ec09/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '950773672282594787'
+lifecycle_stage: active
+run_id: d0469a215d1f475584b5f6fe1d17ec09
+run_name: aged-seal-800
+run_uuid: d0469a215d1f475584b5f6fe1d17ec09
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1693458728764
+status: 1
+tags: []
+user_id: amrirasyidi

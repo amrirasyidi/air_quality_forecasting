@@ -77,17 +77,44 @@ def standardize_df(
     df = df.sort_values(by="read_time")
     return df
 
+def min_max_df_norm(
+    df:pd.DataFrame,
+    target:str='pm2.5',
+    cols:List=['pm2.5', 'amb_temp', 'ch4', 'co', 'nmhc']
+    ) -> pd.DataFrame:
+    """do a normalization to a dataframe
+
+    Args:
+        df (pd.DataFrame): the dataframe to be normalized
+        target (str, optional): the target to be predicted later. Defaults to 'pm2.5'.
+        cols (List, optional): columns that will be normalized. Defaults to ['pm2.5', 'amb_temp', 'ch4', 'co', 'nmhc'].
+
+    Returns:
+        Tuple[pd.DataFrame, float, float]: return the normalized df and min and max value of the target
+    """
+    normalized_column_names = []
+    for column in cols:
+        normalized_column_name = column + '_normalized'
+        normalized_column_names.append(normalized_column_name)
+        df[normalized_column_name] = (df[column] - df[column].min()) / (df[column].max() - df[column].min())
+        # max_column_name = column + '_max'
+        # df[max_column_name] = df[column].max()
+        # min_column_name = column + '_min'
+        # df[min_column_name] = df[column].min()
+
+    return df, normalized_column_names
+
 class AqiDataset(Dataset):
     def __init__(self, data, history_len, col_names, device):
         self.data = data
         self.history_len = history_len
         self.col_names = col_names
         self.device = device
-        
+
     def __len__(self):
         self.len = len(self.data) - self.history_len
         return self.len
-    
+
     def __getitem__(self, index):
         x_cols = self.col_names
         y_cols = ['pm2.5_normalized']

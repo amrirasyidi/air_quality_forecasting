@@ -37,7 +37,7 @@ class LSTNet(nn.Module):
         for i in range(len(self.skip_steps)):
             self.skip_reccs[i] = nn.GRU(
                 self.conv1_out_channels, 
-                self.skip_reccs_out_channels[i], 
+                self.skip_reccs_out_channels[i],
                 batch_first=True
                 )
         # linear after skip
@@ -170,12 +170,11 @@ class LSTNet_lightning(pl.LightningModule):
         return O
 
     def training_step(self, batch, batch_idx):
-        inputs, targets = batch
-        outputs = self(inputs)
-        loss = F.mse_loss(outputs, targets)
+        X, y = batch
+        outputs = self(X)
+        loss = F.mse_loss(outputs, y)
         self.log('train_loss', loss)
         return loss
 
     def configure_optimizers(self, lr=1e-3, weight_decay=1e-2):
-        optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
-        return optimizer
+        return optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)

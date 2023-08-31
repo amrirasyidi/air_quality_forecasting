@@ -123,8 +123,7 @@ def train(
     optimizer: torch.optim.Optimizer,
     loss_fn: torch.nn.Module,
     epochs: int,
-    device: torch.device,
-    writer: SummaryWriter # new parameter to take in a writer
+    device: torch.device
     ) -> Dict[str, List]:
     """Trains and tests a PyTorch model.
 
@@ -145,7 +144,7 @@ def train(
 
     Returns:
     A dictionary of training and testing loss as well as training and
-    testing accuracy metrics. Each metric has a value in a list for 
+    testing accuracy metrics. Each metric has a value in a list for
     each epoch.
     In the form: {train_loss: [...],
               train_acc: [...],
@@ -176,22 +175,11 @@ def train(
             device=device
             )
 
-        ### New: Use the writer parameter to track experiments ###
-        # See if there's a writer, if so, log to it
-        if writer:
-            # Add results to SummaryWriter
-            writer.add_scalars(
-                main_tag="Loss",
-                tag_scalar_dict=
-                {
-                    "train_loss": np.array(epoch_avg_train_loss),
-                    "test_loss": np.array(epoch_avg_test_loss)
-                },
-                global_step=epoch)
-            # Close the writer
-            writer.close()
-        else:
-            pass
+        print(
+            f"Epoch: {epoch+1} | "
+            f"train_loss: {epoch_avg_train_loss:.4f} | "
+            f"test_loss: {epoch_avg_test_loss:.4f} | "
+        )
 
     # Return the filled results at the end of the epochs
     return epoch_avg_train_loss, epoch_avg_test_loss
