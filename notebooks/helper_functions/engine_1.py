@@ -1,5 +1,6 @@
 """
 """
+import math
 import torch
 import torch.optim as optim
 import time
@@ -17,10 +18,21 @@ def train_step(
     epoch:int,
     batch_size:int
     ):
+    """_summary_
+
+    Args:
+        model (torch.nn.Module): _description_
+        train_loader (torch.utils.data.Dataset): _description_
+        device (torch.device): _description_
+        loss_fn (torch.nn.Module): _description_
+        optimizer (optim.Optimizer): _description_
+        epoch (int): _description_
+        batch_size (int): _description_
+    """
     # training
-    avg_loss, runnning_mae, runnning_mse = 0.0, 0.0, 0.0
+    avg_loss, running_mae, running_mse = 0.0, 0.0, 0.0
     start_time = time.time()
-    for batch_no, (x, y_true) in tqdm(enumerate(train_loader), ):
+    for batch_no, (x, y_true) in tqdm(enumerate(train_loader), total=len(train_loader)):
 
         x, y_true = x.to(device), y_true.to(device)
 
@@ -35,14 +47,15 @@ def train_step(
         # UPDATE WEIGHTS
         optimizer.step()
         # OBTAIN RMSE ON BATCH
+        # https://stackoverflow.com/questions/63391113/pytorch-calculate-mse-and-mae
         error = torch.abs(y_pred - y_true).sum().data
         squared_error = ((y_pred - y_true)*(y_pred - y_true)).sum().data
-        runnning_mae += error
-        runnning_mse += squared_error
+        running_mae += error
+        running_mse += squared_error
 
         mlflow.log_metric(
             "Batch RMSE",
-            runnning_mse.item() / batch_size,
+            math.sqrt(running_mse.item() / batch_size),
             # step=math.ceil(epoch * len(train_loader) / batch_size) + batch_no,
         )
 
@@ -55,6 +68,8 @@ def train_step(
 
     total_time = time.time() - start_time
     avg_loss /= len(train_loader)
-
+    rmse = math.sqrt(running_mse/len(train_loader))
+    
+    mlflow.log_metric("RMSE", rmse, step=epoch)
     mlflow.log_metric("Average Loss", avg_loss, step=epoch)
     mlflow.log_metric("Time Taken", total_time, step=epoch)
