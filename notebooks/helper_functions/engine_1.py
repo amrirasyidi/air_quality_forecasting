@@ -18,23 +18,25 @@ class EarlyStopper:
     
     https://stackoverflow.com/questions/71998978/early-stopping-in-pytorch
     """
-    def __init__(self, patience=1, min_delta=0):
+    def __init__(self, patience=1, min_delta=0, doi=4):
         self.patience = patience
         self.min_delta = min_delta
+        self.doi = doi # degree of insignificancy
         self.counter = 0
         self.min_validation_loss = np.inf
 
-    def early_stop(self, validation_loss):
+    def early_stop(self, validation_loss, doi):
+        validation_loss = round(validation_loss, doi)
         if validation_loss < self.min_validation_loss:
             self.min_validation_loss = validation_loss
             self.counter = 0
-        elif validation_loss > (self.min_validation_loss + self.min_delta):
+        elif validation_loss >= (self.min_validation_loss + self.min_delta):
             self.counter += 1
             if self.counter >= self.patience:
                 return True
         return False
 
-
+# https://aahansingh.com/experimentation-tracking-with-mlflow-part-1
 def train_step(
     model: torch.nn.Module,
     train_dataloader: torch.utils.data.DataLoader,
@@ -60,8 +62,9 @@ def train_step(
 
     # Setup metrics initial values
     epoch_loss=0.0
-    running_mse=0.0
+    # running_mse=0.0
     start_time = time.time()
+
     for batch_no, (x, y_true) in enumerate(train_dataloader):
         x, y_true = x.to(device), y_true.to(device)
 
@@ -76,21 +79,22 @@ def train_step(
         # UPDATE WEIGHTS
         optimizer.step()
 
-        # Calculate RMSE for this batch
-        mse = torch.mean((y_pred - y_true) ** 2)
-        running_mse += mse.item()
+        # # Calculate RMSE for this batch
+        # mse = torch.mean((y_pred - y_true) ** 2)
+        # running_mse += mse.item()
 
         # Update epoch loss
         epoch_loss += loss.item()
 
     # Calculate Loss for the entire epoch
     epoch_loss /= len(train_dataloader)
-    # Calculate RMSE for the entire epoch
-    epoch_rmse = math.sqrt(running_mse / len(train_dataloader))
+    # # Calculate RMSE for the entire epoch
+    # epoch_rmse = math.sqrt(running_mse / len(train_dataloader))
     # Calculate time taken for 1 epoch
     epoch_total_time = time.time() - start_time
 
-    return epoch_loss, epoch_rmse, epoch_total_time
+    # return epoch_loss, epoch_rmse, epoch_total_time
+    return epoch_loss, epoch_total_time
 
 # model: torch.nn.Module,
 # train_dataloader: torch.utils.data.DataLoader,
@@ -121,7 +125,7 @@ def test_step(
 
     # Setup metrics initial values
     epoch_loss=0.0
-    running_mse=0.0
+    # running_mse=0.0
     start_time = time.time()
 
     # Turn on inference context manager
@@ -138,18 +142,19 @@ def test_step(
             loss = loss_fn(y_pred, y_true)
             epoch_loss += loss.item()
 
-            # Calculate RMSE for this batch
-            mse = torch.mean((y_pred - y_true) ** 2)
-            running_mse += mse.item()
+            # # Calculate RMSE for this batch
+            # mse = torch.mean((y_pred - y_true) ** 2)
+            # running_mse += mse.item()
 
     # Calculate Loss for the entire epoch
     epoch_loss /= len(test_dataloader)
-    # Calculate RMSE for the entire epoch
-    epoch_rmse = math.sqrt(running_mse / len(test_dataloader))
+    # # Calculate RMSE for the entire epoch
+    # epoch_rmse = math.sqrt(running_mse / len(test_dataloader))
     # Calculate time taken for 1 epoch
     epoch_total_time = time.time() - start_time
 
-    return epoch_loss, epoch_rmse, epoch_total_time
+    # return epoch_loss, epoch_rmse, epoch_total_time
+    return epoch_loss, epoch_total_time
 
 def train(
     model: torch.nn.Module,
@@ -160,6 +165,7 @@ def train(
     loss_fn: torch.nn.Module,
     epochs: int,
     device: torch.device,
+    patience: int
     ) -> Dict[str, List]:
     """Trains and tests a PyTorch model.
 
@@ -206,9 +212,9 @@ def train(
     model.to(device)
 
     # Loop through training and testing steps for a number of epochs
-    early_stopper = EarlyStopper(patience=5, min_delta=0.01)
+    early_stopper = EarlyStopper(patience=patience, min_delta=0)
     for epoch in tqdm(range(epochs)):
-        train_epoch_loss, train_epoch_rmse, train_epoch_total_time = train_step(
+        train_epoch_loss, train_epoch_total_time = train_step(
             model=model,
             train_dataloader=train_dataloader,
             loss_fn=loss_fn,
@@ -216,7 +222,7 @@ def train(
             device=device,
             )
 
-        test_epoch_loss, test_epoch_rmse, test_epoch_total_time = test_step(
+        test_epoch_loss, test_epoch_total_time = test_step(
             model=model,
             test_dataloader=test_dataloader,
             loss_fn=loss_fn,
@@ -224,29 +230,31 @@ def train(
             )
 
         # Logging statement using lazy formatting with %
-        train_log_message = "Model Config: %d | Epoch: %d | train_loss: %.4f | train_rmse: %.4f | train_time: %.2f"
-        logging.info(train_log_message, model_name, epoch+1, train_epoch_loss, train_epoch_rmse, train_epoch_total_time)
+        train_log_message = "Model Config: %s | Epoch: %d | train_loss: %.4f | train_time: %.2f"
+        logging.info(train_log_message, model_name, epoch+1, train_epoch_loss, train_epoch_total_time)
 
-        test_log_message = "Model Config: %d | Epoch: %d | test_loss: %.4f | test_rmse: %.4f | test_time: %.2f \n"
-        logging.info(test_log_message, model_name, epoch+1, test_epoch_loss, test_epoch_rmse, test_epoch_total_time)
+        test_log_message = "Model Config: %s | Epoch: %d | test_loss: %.4f | test_time: %.2f \n"
+        logging.info(test_log_message, model_name, epoch+1, test_epoch_loss, test_epoch_total_time)
 
         # Update results dictionary
         results["train_loss"].append(train_epoch_loss)
-        results["train_rmse"].append(train_epoch_rmse)
+        # results["train_rmse"].append(train_epoch_rmse)
         results["train_time"].append(train_epoch_total_time)
         results["test_loss"].append(test_epoch_loss)
-        results["test_rmse"].append(test_epoch_rmse)
+        # results["test_rmse"].append(test_epoch_rmse)
         results["test_time"].append(test_epoch_total_time)
 
         mlflow.log_metric("Train Loss", train_epoch_loss, step=epoch)
-        mlflow.log_metric("Train RMSE", train_epoch_rmse, step=epoch)
+        # mlflow.log_metric("Train RMSE", train_epoch_rmse, step=epoch)
         mlflow.log_metric("Train Time Taken", train_epoch_total_time, step=epoch)
 
         mlflow.log_metric("Test Loss", test_epoch_loss, step=epoch)
-        mlflow.log_metric("Test RMSE", test_epoch_rmse, step=epoch)
+        # mlflow.log_metric("Test RMSE", test_epoch_rmse, step=epoch)
         mlflow.log_metric("Test Time Taken", test_epoch_total_time, step=epoch)
 
-        if early_stopper.early_stop(test_epoch_loss):
+        if early_stopper.early_stop(train_epoch_loss, doi=4):
+            early_stopper_log_message = "Stopped at Epoch %d after %d epochs with insignificant/no improvement \n"
+            logging.info(early_stopper_log_message, epoch+1, patience)
             break
 
     # Return the filled results at the end of the epochs
