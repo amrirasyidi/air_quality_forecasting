@@ -1,131 +1,171 @@
 """
-Contains functions for training and testing a PyTorch model.
+A module contains necessary classes and functions
+for training LSTNet Model
 """
+import logging
+# import math
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter
-
+import torch.optim as optim
+import time
+import mlflow
+import mlflow.pytorch
 from tqdm.auto import tqdm
 from typing import Dict, List, Tuple
 
-def train_step(model: torch.nn.Module,
-               dataloader: torch.utils.data.DataLoader,
-               loss_fn: torch.nn.Module,
-               optimizer: torch.optim.Optimizer,
-               device: torch.device) -> Tuple[float, float]:
+class EarlyStopper:
+    """OOP implementation of early stopping
+    
+    https://stackoverflow.com/questions/71998978/early-stopping-in-pytorch
+    """
+    def __init__(self, patience=1, min_delta=0, doi=4):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.doi = doi # degree of insignificancy
+        self.counter = 0
+        self.min_validation_loss = np.inf
+
+    def early_stop(self, validation_loss, doi):
+        validation_loss = round(validation_loss, doi)
+        if validation_loss < self.min_validation_loss:
+            self.min_validation_loss = validation_loss
+            self.counter = 0
+        elif validation_loss >= (self.min_validation_loss + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
+
+# https://aahansingh.com/experimentation-tracking-with-mlflow-part-1
+def train_step(
+    model: torch.nn.Module,
+    train_dataloader: torch.utils.data.DataLoader,
+    loss_fn: torch.nn.Module,
+    optimizer: optim.Optimizer,
+    device: torch.device,
+    ) -> Tuple[float, float]:
     """Trains a PyTorch model for a single epoch.
 
-    Turns a target PyTorch model to training mode and then
-    runs through all of the required training steps (forward
-    pass, loss calculation, optimizer step).
-
     Args:
-    model: A PyTorch model to be trained.
-    dataloader: A DataLoader instance for the model to be trained on.
-    loss_fn: A PyTorch loss function to minimize.
-    optimizer: A PyTorch optimizer to help minimize the loss function.
-    device: A target device to compute on (e.g. "cuda" or "cpu").
+        model (torch.nn.Module): A PyTorch model to be trained.
+        train_loader (torch.utils.data.Dataset): A DataLoader instance for the model to be trained on.
+        device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
+        loss_fn (torch.nn.Module): A PyTorch loss function to minimize.
+        optimizer (optim.Optimizer): A PyTorch optimizer to help minimize the loss function.
 
     Returns:
-    A tuple of training loss and training accuracy metrics.
-    In the form (train_loss, train_accuracy). For example:
-
-    (0.1112, 0.8743)
+        Tuple[float, float, float]: A tuple of training loss and training accuracy metrics.
+        In the form (epoch_loss, epoch_rmse, epoch_total_time).
     """
     # Put model in train mode
     model.train()
 
-    # Setup train loss values
-    train_running_loss_list = [] # list of loss values on a certain epoch
-    epoch_avg_train_loss = [] # list of avg loss values from a certain epoch
-    epoch_train_loss = 0
+    # Setup metrics initial values
+    epoch_loss=0.0
+    # running_mse=0.0
+    start_time = time.time()
 
-    # Loop through data loader data batches
-    for batch, (X, y) in enumerate(dataloader):
-        # Send data to target device
-        X, y = X.to(device), y.to(device)
+    for batch_no, (x, y_true) in enumerate(train_dataloader):
+        x, y_true = x.to(device), y_true.to(device)
 
-        # 3. Optimizer zero grad
+        # CLEAR GRADIENT TO PREVENT ACCUMULATION
         optimizer.zero_grad()
-        
-        # 1. Forward pass
-        y_pred = model(X)
-
-        # 2. Calculate  and accumulate loss
-        loss = loss_fn(y_pred, y)
-        train_running_loss_list.append(loss.item())
-        epoch_train_loss += loss.item()
-
-        # 4. Loss backward
+        # COMPUTE OUTPUT
+        y_pred = model(x)
+        # COMPUTE LOSS
+        loss = loss_fn(y_pred, y_true)
+        # FIND GRADIENTS
         loss.backward()
-
-        # 5. Optimizer step
+        # UPDATE WEIGHTS
         optimizer.step()
 
-    # Adjust metrics to get average loss per batch
-    epoch_train_loss = epoch_train_loss / len(dataloader)
-    epoch_avg_train_loss.append(epoch_train_loss)
-    return epoch_avg_train_loss, train_running_loss_list
+        # # Calculate RMSE for this batch
+        # mse = torch.mean((y_pred - y_true) ** 2)
+        # running_mse += mse.item()
 
-def test_step(model: torch.nn.Module, 
-              dataloader: torch.utils.data.DataLoader, 
-              loss_fn: torch.nn.Module,
-              device: torch.device) -> Tuple[float, float]:
+        # Update epoch loss
+        epoch_loss += loss.item()
+
+    # Calculate Loss for the entire epoch
+    epoch_loss /= len(train_dataloader)
+    # # Calculate RMSE for the entire epoch
+    # epoch_rmse = math.sqrt(running_mse / len(train_dataloader))
+    # Calculate time taken for 1 epoch
+    epoch_total_time = time.time() - start_time
+
+    # return epoch_loss, epoch_rmse, epoch_total_time
+    return epoch_loss, epoch_total_time
+
+# model: torch.nn.Module,
+# train_dataloader: torch.utils.data.DataLoader,
+# loss_fn: torch.nn.Module,
+# optimizer: optim.Optimizer,
+# device: torch.device,
+
+def test_step(
+    model: torch.nn.Module,
+    test_dataloader: torch.utils.data.DataLoader,
+    loss_fn: torch.nn.Module,
+    device: torch.device
+    ) -> Tuple[float, float,]:
     """Tests a PyTorch model for a single epoch.
 
-    Turns a target PyTorch model to "eval" mode and then performs
-    a forward pass on a testing dataset.
-
     Args:
-    model: A PyTorch model to be tested.
-    dataloader: A DataLoader instance for the model to be tested on.
-    loss_fn: A PyTorch loss function to calculate loss on the test data.
-    device: A target device to compute on (e.g. "cuda" or "cpu").
+        model (torch.nn.Module): A PyTorch model to be tested.
+        test_dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be tested on.
+        loss_fn (torch.nn.Module): A PyTorch loss function to calculate loss on the test data.
+        device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
 
     Returns:
-    A tuple of testing loss and testing accuracy metrics.
-    In the form (test_loss, test_accuracy). For example:
-
-    (0.0223, 0.8985)
+        Tuple[float, float, float]: A tuple of testing loss and testing accuracy metrics.
+        In the form (epoch_loss, epoch_rmse, epoch_total_time).
     """
     # Put model in eval mode
     model.eval()
 
-    # Setup test loss values
-    test_running_loss_list = [] # list of loss values on a certain epoch
-    epoch_avg_test_loss = [] # list of avg loss values from a certain epoch
-    epoch_test_loss = 0
+    # Setup metrics initial values
+    epoch_loss=0.0
+    # running_mse=0.0
+    start_time = time.time()
 
     # Turn on inference context manager
     with torch.inference_mode():
         # Loop through DataLoader batches
-        for batch, (X, y) in enumerate(dataloader):
+        for batch_no, (x, y_true) in enumerate(test_dataloader):
             # Send data to target device
-            X, y = X.to(device), y.to(device)
+            x, y_true = x.to(device), y_true.to(device)
 
             # 1. Forward pass
-            test_pred_logits = model(X)
+            y_pred = model(x)
 
             # 2. Calculate and accumulate loss
-            loss = loss_fn(test_pred_logits, y)
-            test_running_loss_list.append(loss.item())
-            epoch_test_loss += loss.item()
+            loss = loss_fn(y_pred, y_true)
+            epoch_loss += loss.item()
 
-    # Adjust metrics to get average loss per batch
-    epoch_test_loss = epoch_test_loss / len(dataloader)
-    epoch_avg_test_loss.append(epoch_test_loss)
-    return epoch_avg_test_loss, test_running_loss_list
+            # # Calculate RMSE for this batch
+            # mse = torch.mean((y_pred - y_true) ** 2)
+            # running_mse += mse.item()
+
+    # Calculate Loss for the entire epoch
+    epoch_loss /= len(test_dataloader)
+    # # Calculate RMSE for the entire epoch
+    # epoch_rmse = math.sqrt(running_mse / len(test_dataloader))
+    # Calculate time taken for 1 epoch
+    epoch_total_time = time.time() - start_time
+
+    # return epoch_loss, epoch_rmse, epoch_total_time
+    return epoch_loss, epoch_total_time
 
 def train(
-    model: torch.nn.Module, 
+    model: torch.nn.Module,
+    model_name: str,
     train_dataloader: torch.utils.data.DataLoader,
     test_dataloader: torch.utils.data.DataLoader,
     optimizer: torch.optim.Optimizer,
     loss_fn: torch.nn.Module,
     epochs: int,
     device: torch.device,
-    train_tracker_dir: str,
-    test_tracker_dir: str
+    patience: int
     ) -> Dict[str, List]:
     """Trains and tests a PyTorch model.
 
@@ -133,62 +173,93 @@ def train(
     functions for a number of epochs, training and testing the model
     in the same epoch loop.
 
-    Calculates, prints and stores evaluation metrics throughout.
+    Calculates, logs, and stores evaluation metrics throughout.
 
     Args:
-    model: A PyTorch model to be trained and tested.
-    train_dataloader: A DataLoader instance for the model to be trained on.
-    test_dataloader: A DataLoader instance for the model to be tested on.
-    optimizer: A PyTorch optimizer to help minimize the loss function.
-    loss_fn: A PyTorch loss function to calculate loss on both datasets.
-    epochs: An integer indicating how many epochs to train for.
-    device: A target device to compute on (e.g. "cuda" or "cpu").
+        model (torch.nn.Module): A PyTorch model to be trained and tested.
+        model_name (str): Name of the model for the saving purpose
+        train_dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be trained on.
+        test_dataloader (torch.utils.data.DataLoader): A DataLoader instance for the model to be tested on.
+        optimizer (torch.optim.Optimizer): A PyTorch optimizer to help minimize the loss function.
+        loss_fn (torch.nn.Module): A PyTorch loss function to calculate loss on both datasets.
+        epochs (int): An integer indicating how many epochs to train for.
+        device (torch.device): A target device to compute on (e.g. "cuda" or "cpu").
+        patience (int): For earlystopping implementation. Use patience = epoch to make no earlystopping
 
     Returns:
-    A dictionary of training and testing loss as well as training and
-    testing accuracy metrics. Each metric has a value in a list for
-    each epoch.
-    In the form: {train_loss: [...],
-              train_acc: [...],
-              test_loss: [...],
-              test_acc: [...]} 
-    For example if training for epochs=2: 
-             {train_loss: [2.0616, 1.0537],
-              train_acc: [0.3945, 0.3945],
-              test_loss: [1.2641, 1.5706],
-              test_acc: [0.3400, 0.2973]} 
+        Dict[str, List]: A dictionary of training and testing loss as well as training and
+        testing calculation time metrics. Each metric has a value in a list for
+        each epoch.
+        In the form: {
+            "train_loss": [],
+            "train_time": [],
+            "test_loss": [],
+            "test_time": []
+            }
+        For example if training for epochs=2:
+        {"train_loss": [2.0616, 1.0537],
+        "train_time": [0.3945, 0.3945],
+        "test_loss": [0.2345, 1.3945],
+        "test_time": [1.0212, 1.4357]}
     """
+    # Create empty results dictionary
+    results = {
+        "train_loss": [],
+        # "train_rmse": [],
+        "train_time": [],
+        "test_loss": [],
+        # "test_rmse": [],
+        "test_time": []
+    }
+
     # Make sure model on target device
     model.to(device)
 
     # Loop through training and testing steps for a number of epochs
+    early_stopper = EarlyStopper(patience=patience, min_delta=0)
     for epoch in tqdm(range(epochs)):
-        epoch_avg_train_loss, _ = train_step(
+        train_epoch_loss, train_epoch_total_time = train_step(
             model=model,
-            dataloader=train_dataloader,
+            train_dataloader=train_dataloader,
             loss_fn=loss_fn,
             optimizer=optimizer,
-            device=device
-            )
-        epoch_avg_test_loss, _ = test_step(
-            model=model,
-            dataloader=test_dataloader,
-            loss_fn=loss_fn,
-            device=device
+            device=device,
             )
 
-        print(
-            f"Epoch: {epoch+1} | "
-            f"train_loss: {epoch_avg_train_loss[0]:.4f} | "
-            f"test_loss: {epoch_avg_test_loss[0]:.4f} | "
-        )
-        
-        if train_tracker_dir:
-            with open(train_tracker_dir, 'a+') as file:
-                file.write(f'{epoch_avg_train_loss[0]}\n')
-        if test_tracker_dir:
-            with open(test_tracker_dir, 'a+') as file:
-                file.write(f'{epoch_avg_test_loss[0]}\n')
+        test_epoch_loss, test_epoch_total_time = test_step(
+            model=model,
+            test_dataloader=test_dataloader,
+            loss_fn=loss_fn,
+            device=device,
+            )
+
+        # Logging statement using lazy formatting with %
+        train_log_message = "Model Config: %s | Epoch: %d | train_loss: %.4f | train_time: %.2f"
+        logging.info(train_log_message, model_name, epoch+1, train_epoch_loss, train_epoch_total_time)
+
+        test_log_message = "Model Config: %s | Epoch: %d | test_loss: %.4f | test_time: %.2f \n"
+        logging.info(test_log_message, model_name, epoch+1, test_epoch_loss, test_epoch_total_time)
+
+        # Update results dictionary
+        results["train_loss"].append(train_epoch_loss)
+        # results["train_rmse"].append(train_epoch_rmse)
+        results["train_time"].append(train_epoch_total_time)
+        results["test_loss"].append(test_epoch_loss)
+        # results["test_rmse"].append(test_epoch_rmse)
+        results["test_time"].append(test_epoch_total_time)
+
+        mlflow.log_metric("Train Loss", train_epoch_loss, step=epoch)
+        # mlflow.log_metric("Train RMSE", train_epoch_rmse, step=epoch)
+        mlflow.log_metric("Train Time Taken", train_epoch_total_time, step=epoch)
+
+        mlflow.log_metric("Test Loss", test_epoch_loss, step=epoch)
+        # mlflow.log_metric("Test RMSE", test_epoch_rmse, step=epoch)
+        mlflow.log_metric("Test Time Taken", test_epoch_total_time, step=epoch)
+
+        if early_stopper.early_stop(train_epoch_loss, doi=4):
+            early_stopper_log_message = "Stopped at Epoch %d after %d epochs with insignificant/no improvement \n"
+            logging.info(early_stopper_log_message, epoch+1, patience)
+            break
 
     # Return the filled results at the end of the epochs
-    return epoch_avg_train_loss, epoch_avg_test_loss
+    return results

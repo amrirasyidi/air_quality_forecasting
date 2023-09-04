@@ -1,0 +1,15 @@
+artifact_uri: file:///d:/0_amri_local/11_aqi_forecast/notebooks/mlruns/229028803339382221/ad90806c6ccc48fb94177d8ed053a0be/artifacts
+end_time: 1693628925790
+entry_point_name: ''
+experiment_id: '229028803339382221'
+lifecycle_stage: active
+run_id: ad90806c6ccc48fb94177d8ed053a0be
+run_name: carefree-auk-534
+run_uuid: ad90806c6ccc48fb94177d8ed053a0be
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1693628925759
+status: 4
+tags: []
+user_id: arasyidi

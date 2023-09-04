@@ -1,0 +1,15 @@
+artifact_uri: file:///d:/0_amri_local/11_aqi_forecast/notebooks/mlruns/229028803339382221/363f8a865dc64bc5bf986b9a44e581e2/artifacts
+end_time: 1693628906608
+entry_point_name: ''
+experiment_id: '229028803339382221'
+lifecycle_stage: active
+run_id: 363f8a865dc64bc5bf986b9a44e581e2
+run_name: bright-slug-679
+run_uuid: 363f8a865dc64bc5bf986b9a44e581e2
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1693628893451
+status: 4
+tags: []
+user_id: arasyidi
