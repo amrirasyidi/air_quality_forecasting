@@ -25,6 +25,12 @@ The testing model perform quite well on the first x hours of the forecasting as 
 
 tbd
 
+## LSTNet
+https://github.com/Vsooong/multivariate-prediction
+https://github.com/gokulkarthik/LSTNet.pytorch/blob/master/LSTNet-For-Cryptocurrency-Market-Prediction.ipynb
+https://github.com/laiguokun/LSTNet/blob/master/models/LSTNet.py
+https://github.com/Goochaozheng/LSTNet-Attn/blob/main/models/LSTNet.py#L6
+
 ## Envs
 Create yml file
 `conda env export --no-builds | findstr -v "prefix" > environment.yml`

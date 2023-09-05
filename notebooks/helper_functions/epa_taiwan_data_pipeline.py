@@ -38,7 +38,7 @@ def import_epa_data(
         df = pd.read_csv(selected_year[0])
     else:
         # read all year
-        df =  pd.concat([pd.read_csv(csv) for csv in epa_taiwan_csv_list])
+        df = pd.concat([pd.read_csv(csv) for csv in epa_taiwan_csv_list])
 
     if site_name:
         # read only specific site name
@@ -53,15 +53,17 @@ def convert_to_naive(dt):
     return dt_obj.replace(tzinfo=None)
 
 def standardize_df(
-    df:pd.DataFrame
+    df:pd.DataFrame,
+    dt_col_name: str
     ) -> pd.DataFrame:
     """
     1. simplify the column names (remove non alpha numeric, convert all to lowercase)
     2. convert to datetime format
     3. sort the dataframe based on read_time
-    
+
     Args:
         df (pd.DataFrame): the pd.Dataframe to be standardize
+        dt_col_name (str): the column name of datetime column
 
     Returns:
         pd.DataFrame: standardized pd.Dataframe
@@ -71,7 +73,7 @@ def standardize_df(
     df = df.rename(columns=col_name_mapping)
 
     # convert to datetime format
-    df['read_time'] = pd.to_datetime(df['read_time'].apply(convert_to_naive))
+    df[dt_col_name] = pd.to_datetime(df[dt_col_name].apply(convert_to_naive))
 
     # sort the dataframe based on read_time
     df = df.sort_values(by="read_time")

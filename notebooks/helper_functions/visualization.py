@@ -2,8 +2,27 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from typing import List, Callable
+from typing import Tuple, List, Callable
 
+def reg_line(
+    x: np.array,
+    y: np.array
+    ) -> Tuple[float, float, np.array]:
+    """Fit linear regression via least squares with numpy.polyfit
+    deg=1 means linear fit (i.e. polynomial of degree 1)
+
+    Args:
+        x (np.array): array of independent variables
+        y (np.array): array of dependent variables
+
+    Returns:
+        Tuple[float, float, np.array]: slope, intercept, and the fitted
+        line array
+    """
+    slope, intercept = np.polyfit(x, y, deg=1)
+    # Create sequence for plotting
+    xseq = np.linspace(min(x), max(x))
+    return slope, intercept, xseq
 
 def plot_scatter_with_reg(
     data:pd.DataFrame,
