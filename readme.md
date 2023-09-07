@@ -36,3 +36,4 @@ Create yml file
 `conda env export --no-builds | findstr -v "prefix" > environment.yml`
 
 Install from yml file
+`conda env create --name envname --file=environment.yml`

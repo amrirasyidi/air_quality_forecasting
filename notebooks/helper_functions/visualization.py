@@ -1,8 +1,130 @@
-import pandas as pd
-import numpy as np
-import seaborn as sns
+"""Module that contain functions to help with visualization
+"""
+import random
+from typing import Callable, List, Tuple
+
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-from typing import Tuple, List, Callable
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from flexitext import flexitext
+
+
+def overall_plot(
+    df_to_plot: pd.DataFrame,
+    x: str,
+    y: List,
+    ncols:int
+    ) -> Tuple[plt.Figure, plt.Axes]:
+    """Create an overall timeseries line graph
+
+    Args:
+        df_to_plot (pd.DataFrame): the dataframe to be plotted
+        x (str): column name of the x axis (timeseries)
+        y (List): list of column names to be plotted
+        ncols (int): number of column of the plot/figure
+
+    Returns:
+        Tuple[plt.Figure, plt.Axes]
+    """
+    nrow = len(y)
+
+    fig, ax = plt.subplots(
+        nrow,
+        ncols,
+        figsize = (15,4*nrow)
+        )
+
+    if (ncols>1) or (nrow>1):
+        for y, ax in zip(y, ax.flatten()):
+            ax.plot(
+                df_to_plot[x],
+                df_to_plot[y[0]],
+                linestyle='-',
+                )
+            ax.set_title(f'{y.upper()} Levels Over Time', fontweight = "bold", fontsize = 20, fontfamily = "monospace")
+            ax.set_xlabel('Time')
+            ax.set_ylabel(f'{y}')
+    else:
+        ax.plot(
+            df_to_plot[x],
+            df_to_plot[y[0]],
+            linestyle='-',
+            )
+        ax.set_title(f'{y[0].upper()} Levels Over Time', fontweight = "bold", fontsize = 20, fontfamily = "monospace")
+        ax.set_xlabel('Time')
+        ax.set_ylabel(f'{y[0]}')
+
+    plt.tight_layout()
+    
+    return fig, ax
+
+def timely_plot(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    time_granularity: str='day',
+    nrow: int=4,
+    ncol: int=2
+):
+    """plot timely trend of the specified variable.
+
+    Args:
+        df (pd.DataFrame): the dataframe to be plotted
+        x (str): timeseries column
+        y (str): variable to be plotted
+        time_granularity (str): the time granularity, Defaults to 'day',
+        nrow (int, optional): number of row. Defaults to 4.
+        ncol (int, optional): number of column. Defaults to 2.
+    """
+    # initiate fig and ax
+    fig, ax = plt.subplots(
+        nrow,
+        ncol,
+        figsize=(14,2.5*nrow),
+        sharey=True
+        )
+    if time_granularity=='day':
+        rand_date = sorted(random.sample(
+            df[x].dt.date.unique().tolist(), 
+            nrow*ncol
+        ))
+        date_fmt = mdates.DateFormatter('%H:%M:%S')  # Format for the x-axis labels
+    elif time_granularity=='week':
+        rand_date = sorted(random.sample(
+            df[x].dt.strftime('%Y-%U').unique().tolist(),
+            nrow*ncol
+        ))
+        date_fmt = mdates.DateFormatter("%A")  # Format for the x-axis labels
+    else:
+        rand_date = sorted(
+            df[x].dt.strftime('%Y-%m').unique().tolist()
+        )
+        date_fmt = mdates.DateFormatter('%m-%d')  # Format for the x-axis labels
+
+    for date, ax in zip(rand_date, ax.flatten()):
+        if time_granularity=='day':
+            data = df[df[x].dt.date == date]
+        elif time_granularity=='week':
+            data = df[df[x].dt.strftime('%Y-%U') == date]
+        else:
+            data = df[df[x].dt.strftime('%Y-%m') == date]
+        # Plotting with time on the x-axis
+        ax.plot(
+            data[x],
+            data[y],
+        )
+        ax.xaxis.set_major_formatter(date_fmt)  # Set the x-axis format to show time only
+        ax.set_title(f'{date}', fontweight="bold", fontsize=14, fontfamily="monospace")
+        
+    title = (
+        f"<name:monospace, size:20> The trend of hourly {y} on {nrow*ncol} random "
+        f"<color: #d43535>{time_granularity}</></>"
+    )
+    flexitext(0.5, 1.03, title, va="top", ha="center", xycoords="figure fraction")
+    
+    plt.tight_layout()
 
 def reg_line(
     x: np.array,
@@ -45,7 +167,7 @@ def plot_scatter_with_reg(
         reg_func (Callable): regression function that will be used to be fit into the data to make the regression line
         norm_func (Callable): normalization function that will be used to be fit into the data
     """
-    fig, axs = plt.subplots(nrow,ncol,figsize = (20, 20), sharey=True)
+    fig, axs = plt.subplots(nrow,ncol,figsize = (15,3*nrow), sharey=True)
 
     plt.tight_layout()
 
@@ -127,10 +249,11 @@ def plot_correlation_heatmap(dataframe:pd.DataFrame):
     mask = np.triu(np.ones_like(matrix, dtype=bool))
 
     # Create a custom diverging palette
-    cmap = sns.diverging_palette(250, 15, s=75, l=40, n=9,
-                                 center="light",
-                                 as_cmap=True
-                                )
+    cmap = sns.diverging_palette(
+        250, 15, s=75, l=40, n=9,
+        center="light",
+        as_cmap=True
+    )
 
     plt.figure(figsize=(16, 12))
 
