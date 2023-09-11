@@ -203,20 +203,25 @@ def plot_scatter_with_reg(
 
 def plot_lagged_scatter(
     data:pd.DataFrame,
-    reg_func,
+    reg_func:Callable=reg_line,
     shift:int=-1,
     parameter:str="pm2.5",
     ):
     temp_df = data[[parameter]]
     lagged_param_name = parameter+"_lag"
-    temp_df[lagged_param_name] = temp_df[parameter].shift(shift)
+    temp_df = temp_df.assign(**{lagged_param_name: temp_df[parameter].shift(shift)})
     x=temp_df[parameter]
     y=temp_df[lagged_param_name]
+    
+    try:
+        slope, intercept, xseq = reg_func(x.iloc[:shift],y[:shift])
+    except:
+        x=x.ffill()
+        y=y.ffill()
+        slope, intercept, xseq = reg_func(x.iloc[:shift],y[:shift])
 
     fig, ax = plt.subplots()
-
-    slope, intercept, xseq = reg_func(x.iloc[:shift],y[:shift])
-
+    # plot points
     ax.scatter(
         x=x,
         y=y,
@@ -261,3 +266,120 @@ def plot_correlation_heatmap(dataframe:pd.DataFrame):
                 fmt='.2f', square=True, cmap=cmap)
 
     plt.show()
+
+def plot_prediction(
+    length:int,
+    train_data:pd.DataFrame,
+    test_data:pd.DataFrame,
+    predictions:pd.DataFrame,
+    save:bool=False,
+    img_save_dir:str=None
+):
+    """Plot train, test, and prediction data
+
+    Args:
+        length (int): the length of data to be drawn
+        train_data (pd.DataFrame): train data df
+        test_data (pd.DataFrame): test data df
+        predictions (pd.DataFrame): prediction df
+        save (bool, optional): save the plot or not. Defaults to False.
+    """
+    temp_train = (
+        train_data[['pm2.5', 'read_time']].reset_index()
+        .tail(length).reset_index()
+        .drop(columns=["index", "level_0"])
+        .rename(columns={'pm2.5':'pm2.5_train'})
+    )
+    temp_test = (
+        test_data[['pm2.5', 'read_time']].reset_index()
+        .head(length).reset_index()
+        .drop(columns=["index", "level_0"])
+        .rename(columns={'pm2.5':'pm2.5_test'})
+    )
+
+    temp_pred = predictions.head(length).rename(columns={'pm2.5':'pm2.5_prediction'})
+
+    temp_pred_test = pd.merge(temp_pred, temp_test, on='read_time', how='inner')
+
+    # Calculate MSE and RMSE
+    temp_pred_test['squared_error'] = (temp_pred_test['pm2.5_test'] - temp_pred_test['pm2.5_prediction']) ** 2
+    # mse = temp_pred_test['squared_error'].mean()
+    rmse = (temp_pred_test['squared_error'].mean())**.5
+
+    _, ax = plt.subplots(figsize = (20,5))
+
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    plt.xlabel("")
+
+    temp_train.plot(
+        x="read_time",
+        y="pm2.5_train",
+        ax=ax,
+        label="Train",
+        color="blue",
+        lw=2
+    )
+
+    temp_pred_test.plot(
+        x="read_time",
+        y="pm2.5_prediction",
+        ax=ax,
+        label="Prediction",
+        color="red",
+        marker="o",
+        lw=3
+    )
+
+    # Define the confidence interval
+    ci = 0.95 * (temp_pred_test['squared_error'].std() / np.sqrt(len(temp_pred_test)))
+
+    ax.fill_between(
+        temp_pred_test.read_time.values, 
+        (temp_pred_test["pm2.5_prediction"]-ci).to_numpy(), 
+        (temp_pred_test["pm2.5_prediction"]+ci).to_numpy(), 
+        color='yellow', alpha=0.1,
+        label=r"95% confidence interval"
+    )
+
+    temp_pred_test.plot(
+        x="read_time",
+        y="pm2.5_test",
+        linestyle='--',
+        ax=ax,
+        label="True Value",
+        color="black",
+        marker="o",
+        lw=2
+    )
+
+    title = "<name:monospace, size:18><weight:bold>Forecasting Result</></>"
+    flexitext(0, 1.20, title, va="top", ax=ax)
+
+    subtitle = (
+        f"<name:monospace, size:12, color:#454545>The AQI prediction value of the first"
+        f" {length} hours of data\n<color: #d43535>RMSE: {rmse:.2f}</></>"
+    )
+    flexitext(0, 1.12, subtitle, va="top", ax=ax)
+
+    # Shrink current axis's height by 10% on the bottom
+    box = ax.get_position()
+    ax.set_position(
+        [box.x0, box.y0 + box.height * 0.1,
+         box.width, box.height * 0.9]
+    )
+
+    # Put a legend below current axis
+    ax.legend(
+        loc='upper center',
+        bbox_to_anchor=(0.8, 1.15), # original (0.5, -0.05)
+        fancybox=True, shadow=True, ncol=5
+    )
+
+    plt.xlabel(None)
+
+    if save:
+        plt.savefig(
+            rf'{img_save_dir}',
+            bbox_inches='tight'
+        )

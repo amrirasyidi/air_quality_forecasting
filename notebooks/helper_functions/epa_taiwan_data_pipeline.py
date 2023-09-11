@@ -1,14 +1,13 @@
 """
 module to import and preprocess epa taiwan data
 """
+import glob
 import os
 import pathlib
-import glob
-from typing import List
+
 import pandas as pd
-from dateutil import parser
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 root_dir = pathlib.Path(os.getcwd()).parent
 raw_data_dir = root_dir / "data/0_raw"
@@ -46,65 +45,6 @@ def import_epa_data(
 
     # read all sites
     return df
-
-# Function to convert datetime to naive datetime
-def convert_to_naive(dt):
-    dt_obj = parser.parse(dt)
-    return dt_obj.replace(tzinfo=None)
-
-def standardize_df(
-    df:pd.DataFrame,
-    dt_col_name: str
-    ) -> pd.DataFrame:
-    """
-    1. simplify the column names (remove non alpha numeric, convert all to lowercase)
-    2. convert to datetime format
-    3. sort the dataframe based on read_time
-
-    Args:
-        df (pd.DataFrame): the pd.Dataframe to be standardize
-        dt_col_name (str): the column name of datetime column
-
-    Returns:
-        pd.DataFrame: standardized pd.Dataframe
-    """
-    # remove non alpha numeric, convert all to lowercase
-    col_name_mapping = {_: _.lower() for _ in df.columns}
-    df = df.rename(columns=col_name_mapping)
-
-    # convert to datetime format
-    df[dt_col_name] = pd.to_datetime(df[dt_col_name].apply(convert_to_naive))
-
-    # sort the dataframe based on read_time
-    df = df.sort_values(by="read_time")
-    return df
-
-def min_max_df_norm(
-    df:pd.DataFrame,
-    target:str='pm2.5',
-    cols:List=['pm2.5', 'amb_temp', 'ch4', 'co', 'nmhc']
-    ) -> pd.DataFrame:
-    """do a normalization to a dataframe
-
-    Args:
-        df (pd.DataFrame): the dataframe to be normalized
-        target (str, optional): the target to be predicted later. Defaults to 'pm2.5'.
-        cols (List, optional): columns that will be normalized. Defaults to ['pm2.5', 'amb_temp', 'ch4', 'co', 'nmhc'].
-
-    Returns:
-        Tuple[pd.DataFrame, float, float]: return the normalized df and min and max value of the target
-    """
-    normalized_column_names = []
-    for column in cols:
-        normalized_column_name = column + '_normalized'
-        normalized_column_names.append(normalized_column_name)
-        df[normalized_column_name] = (df[column] - df[column].min()) / (df[column].max() - df[column].min())
-        # max_column_name = column + '_max'
-        # df[max_column_name] = df[column].max()
-        # min_column_name = column + '_min'
-        # df[min_column_name] = df[column].min()
-
-    return df, normalized_column_names
 
 class AqiDataset(Dataset):
     def __init__(self, data, history_len, col_names, device):

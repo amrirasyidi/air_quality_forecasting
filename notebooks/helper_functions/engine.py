@@ -3,15 +3,21 @@ A module contains necessary classes and functions
 for training LSTNet Model
 """
 import logging
+
 # import math
+import re
+import time
+from typing import Dict, List, Tuple
+
+import mlflow
+import mlflow.pytorch
 import numpy as np
 import torch
 import torch.optim as optim
-import time
-import mlflow
-import mlflow.pytorch
 from tqdm.auto import tqdm
-from typing import Dict, List, Tuple
+
+# from models import lstnet_gokul
+
 
 class EarlyStopper:
     """OOP implementation of early stopping
@@ -263,3 +269,31 @@ def train(
 
     # Return the filled results at the end of the epochs
     return results
+
+# def inference(
+#     saved_model_dir,
+    
+# ):
+#     # Setup the best model filepath
+#     model_name = "LSTNET_50E_32B_168W.pth"
+#     best_model_path = saved_model_dir / model_name
+
+#     # Extract relevant parts using a single regex pattern
+#     match = re.match(r'[^_]+_(\d+)E_(\d+)B_(\d+)W\.pth', model_name)
+
+#     # Extract values from the matched groups and convert them to integers
+#     epoch, batch_size, lookback_period = map(int, match.groups())
+    
+#     # Instantiate a new instance of EffNetB2 (to load the saved state_dict() to)
+#     best_model = lstnet_gokul.LSTNet(
+#         ar_window_size=lookback_period,
+#         num_features=1,
+#         recc1_out_channels=64,
+#         conv1_out_channels=32
+#     )
+
+#     # Load the saved best model state_dict()
+#     best_model.load_state_dict(torch.load(best_model_path))
+    
+#     inference_data, normalized_column_names = data_pipeline.df_norm(test_data, [test_data.columns[1]])
+#     inf_min_pm, inf_max_pm = inference_data["pm2.5"].min(), inference_data["pm2.5"].max()
