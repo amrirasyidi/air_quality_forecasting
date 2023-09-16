@@ -43,7 +43,8 @@ def overall_plot(
                 df_to_plot[y[0]],
                 linestyle='-',
                 )
-            ax.set_title(f'{y.upper()} Levels Over Time', fontweight = "bold", fontsize = 20, fontfamily = "monospace")
+            ax.set_title(f'{y.upper()} Levels Over Time',
+                         fontweight = "bold", fontsize = 20, fontfamily = "monospace")
             ax.set_xlabel('Time')
             ax.set_ylabel(f'{y}')
     else:
@@ -52,7 +53,8 @@ def overall_plot(
             df_to_plot[y[0]],
             linestyle='-',
             )
-        ax.set_title(f'{y[0].upper()} Levels Over Time', fontweight = "bold", fontsize = 20, fontfamily = "monospace")
+        ax.set_title(f'{y[0].upper()} Levels Over Time',
+                     fontweight = "bold", fontsize = 20, fontfamily = "monospace")
         ax.set_xlabel('Time')
         ax.set_ylabel(f'{y[0]}')
 
@@ -79,7 +81,7 @@ def timely_plot(
         ncol (int, optional): number of column. Defaults to 2.
     """
     # initiate fig and ax
-    fig, ax = plt.subplots(
+    _, ax = plt.subplots(
         nrow,
         ncol,
         figsize=(14,2.5*nrow),
@@ -115,9 +117,9 @@ def timely_plot(
             data[x],
             data[y],
         )
-        ax.xaxis.set_major_formatter(date_fmt)  # Set the x-axis format to show time only
+        ax.xaxis.set_major_formatter(date_fmt) # Set the x-axis format to show time only
         ax.set_title(f'{date}', fontweight="bold", fontsize=14, fontfamily="monospace")
-        
+
     title = (
         f"<name:monospace, size:20> The trend of hourly {y} on {nrow*ncol} random "
         f"<color: #d43535>{time_granularity}</></>"
@@ -160,14 +162,18 @@ def plot_scatter_with_reg(
 
     Args:
         data (pd.DataFrame): the dataframe to be plotted
-        xs (List): list of item from the dataframe columns which will be the x axis of the plots
-        y (str): one string item from the dataframe columns which will be the y axis of the plots
+        xs (List): list of item from the dataframe columns which will be the
+                    x axis of the plots
+        y (str): one string item from the dataframe columns which will be the
+                    y axis of the plots
         nrow (int): number of row of the visualization
         ncol (int): number of columns of the visualization
-        reg_func (Callable): regression function that will be used to be fit into the data to make the regression line
-        norm_func (Callable): normalization function that will be used to be fit into the data
+        reg_func (Callable): regression function that will be used to be fit 
+                                into the data to make the regression line
+        norm_func (Callable): normalization function that will be used to be fit 
+                                into the data
     """
-    fig, axs = plt.subplots(nrow,ncol,figsize = (15,3*nrow), sharey=True)
+    _, axs = plt.subplots(nrow,ncol,figsize = (15,3*nrow), sharey=True)
 
     plt.tight_layout()
 
@@ -220,7 +226,7 @@ def plot_lagged_scatter(
         y=y.ffill()
         slope, intercept, xseq = reg_func(x.iloc[:shift],y[:shift])
 
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     # plot points
     ax.scatter(
         x=x,
@@ -302,7 +308,9 @@ def plot_prediction(
     temp_pred_test = pd.merge(temp_pred, temp_test, on='read_time', how='inner')
 
     # Calculate MSE and RMSE
-    temp_pred_test['squared_error'] = (temp_pred_test['pm2.5_test'] - temp_pred_test['pm2.5_prediction']) ** 2
+    temp_pred_test['squared_error'] = (
+        temp_pred_test['pm2.5_test'] - temp_pred_test['pm2.5_prediction']
+        ) ** 2
     # mse = temp_pred_test['squared_error'].mean()
     rmse = (temp_pred_test['squared_error'].mean())**.5
 
