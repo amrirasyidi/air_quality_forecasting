@@ -3,12 +3,13 @@ LSTNET Model combined from
 https://github.com/gokulkarthik/LSTNet.pytorch/blob/master/LSTNet.py
 https://github.com/Goochaozheng/LSTNet-Attn/blob/main/models/LSTNet.py#L6
 """
+import lightning.pytorch as pl
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import lightning.pytorch as pl
+
 
 class LSTNet(nn.Module):
     def __init__(self, ar_window_size, num_features, recc1_out_channels, conv1_out_channels):
