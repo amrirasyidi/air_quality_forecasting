@@ -8,21 +8,21 @@ import numpy as np
 import pandas as pd
 from matplotlib.axes._axes import Axes
 from matplotlib.figure import Figure
-
-# from flexitext import flexitext
 from sklearn import metrics
 
 warnings.filterwarnings("ignore")
 
-def create_features(df, target_variable):
-    """
-    Creates time series features from datetime index
-    
+def create_features(
+    df: pd.DataFrame,
+    target_variable: str
+    ):
+    """Creates time series features from datetime index
+
     Args:
-        df (float64): Values to be added to the model incl. corresponding datetime
-                      , numpy array of floats
-        target_variable (string): Name of the target variable within df   
-    
+        df (pd.DataFrame): the dataframe which contains datetime column to be turned
+                            into time series forecasting features and target
+        target_variable (str): the target variable name
+
     Returns:
         X (int): Extracted values from datetime index, dataframe
         y (int): Values of target variable, numpy array of integers
@@ -49,8 +49,10 @@ def mean_absolute_percentage_error_func(y_true, y_pred):
     Calculate the mean absolute percentage error as a metric for evaluation
     
     Args:
-        y_true (float64): Y values for the dependent variable (test part), numpy array of floats 
-        y_pred (float64): Predicted values for the dependen variable (test parrt), numpy array of floats
+        y_true (float64): Y values for the dependent variable (test part), 
+                            numpy array of floats 
+        y_pred (float64): Predicted values for the dependen variable (test parrt), 
+                            numpy array of floats
     
     Returns:
         Mean absolute percentage error 
@@ -68,8 +70,10 @@ def timeseries_evaluation_metrics_func(y_true, y_pred):
         - R²
     
     Args:
-        y_true (float64): Y values for the dependent variable (test part), numpy array of floats 
-        y_pred (float64): Predicted values for the dependen variable (test parrt), numpy array of floats
+        y_true (float64): Y values for the dependent variable (test part), 
+                            numpy array of floats 
+        y_pred (float64): Predicted values for the dependen variable (test parrt), 
+                            numpy array of floats
     
     Returns:
         MSE, MAE, RMSE, MAPE and R² 
@@ -87,16 +91,17 @@ def xgb_time_train_test_split(
     val_frac:float,
     test_frac:float
 ):
-    """_summary_
+    """split the time series data into training, validation, and test data based on
+    user inputted fractions
 
     Args:
-        all_data (pd.DataFrame): _description_
-        train_frac (float): _description_
-        val_frac (float): _description_
-        test_frac (float): _description_
+        all_data (pd.DataFrame): the whole dataframe to be splitted
+        train_frac (float): fraction of training data
+        val_frac (float): fraction of validation data
+        test_frac (float): fraction of test data
 
     Returns:
-        _type_: _description_
+        _type_: training, validation, (and test) dataframe
     """
     if test_frac:
         assert train_frac+val_frac+test_frac==1, \
@@ -184,10 +189,10 @@ def xgb_predict_plot(
         color='blue',
         label='True Value'
     )
-    
+
     pred_real_df = pd.DataFrame(
-        data=pred_real, 
-        index=true_value.index, 
+        data=pred_real,
+        index=true_value.index,
         columns=['Predicted']
     )
     pred_real_df.plot(
