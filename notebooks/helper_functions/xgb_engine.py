@@ -1,12 +1,16 @@
-from typing import Dict
+"""functions to help with xgboost training pipeline
+"""
+from typing import Dict, List
 
-import pandas as pd
 import numpy as np
+
+# import optuna
+import pandas as pd
 import xgboost as xgb
+
+# from optuna.integration.mlflow import MLflowCallback
 from sklearn import metrics
 
-import optuna
-from optuna.integration.mlflow import MLflowCallback
 
 def xgb_train(
     train_feature_df:pd.DataFrame,
@@ -15,27 +19,39 @@ def xgb_train(
     val_target_series: pd.Series,
     param:Dict,
     num_round:int,
-    pruning_callback
+    pruning_callbacks:List
     ):
+    """train an xgboost model
+
+    Args:
+        train_feature_df (pd.DataFrame): training feature dataframe
+        train_target_series (pd.Series): training target series
+        val_feature_df (pd.DataFrame): validation feature dataframe
+        val_target_series (pd.Series): validation target series
+        param (Dict): parameters for the xgboost model
+        num_round (int): xgboost trainng epoch number
+        pruning_callbacks (List): pruning method for the xgboost model
+
+    Returns:
+        _type_: _description_
+    """
     # Convert the datasets into DMatrix
     dtrain = xgb.DMatrix(train_feature_df, label=train_target_series)
     dval = xgb.DMatrix(val_feature_df, label=val_target_series)
 
     # Train the model
-    if pruning_callback:
-        xgb_model = xgb.train(param, dtrain, num_round, callbacks=[pruning_callback])
+    if pruning_callbacks:
+        xgb_model = xgb.train(param, dtrain, num_round, callbacks=pruning_callbacks)
     else:
         evals_result = {}
         xgb_model = xgb.train(
-            param, dtrain, num_round, 
+            param, dtrain, num_round,
             evals=[(dtrain, 'train'), (dval, 'valid')],
             early_stopping_rounds=20,
             verbose_eval=False,
             evals_result=evals_result
             )
 
-    # xgb_model = xgb.train(param, dtrain, num_round)
-    
     # Predict the target for the training set
     train_pred = xgb_model.predict(dtrain)
 
