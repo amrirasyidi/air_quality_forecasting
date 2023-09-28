@@ -1,37 +1,31 @@
+from typing import List
 import pandas as pd
+from pytorch_forecasting import TimeSeriesDataSet
 
+def generate_dataset(
+    train_df:pd.DataFrame,
+    time_varying_known_reals:List,
+    min_prediction_length:int=24//2,
+    max_prediction_length:int=24*7,
+):
+    max_encoder_length = max_prediction_length * 3
+    training_cutoff = train_df["time_idx"].max() - max_prediction_length
 
-def create_features(
-    df: pd.DataFrame,
-    target_variable: str,
-    dt_col: str
-    ):
-    """Creates time series features from datetime index
+    training = TimeSeriesDataSet(
+        train_df[lambda x: x.time_idx <= training_cutoff],
+        time_idx='time_idx',
+        target='pm25',
+        group_ids=['stasiun'],
+        min_encoder_length=max_encoder_length // 2,
+        max_encoder_length=max_encoder_length,
+        min_prediction_length=min_prediction_length,
+        max_prediction_length=max_prediction_length,
+        static_categoricals=['stasiun'],
+        time_varying_known_reals=time_varying_known_reals,
+        time_varying_unknown_reals=['pm25'],
+        add_relative_time_idx=True,
+        add_target_scales=True,
+        add_encoder_length=True,
+    )
 
-    Args:
-        df (pd.DataFrame): the dataframe which contains datetime column to be turned
-                            into time series forecasting features and target
-        target_variable (str): the target variable name
-
-    Returns:
-        X (int): Extracted values from datetime index, dataframe
-        y (int): Values of target variable, numpy array of integers
-    """
-    # df[dt_col] = df.index
-    df['hour'] = df[dt_col].dt.hour
-    df['dayofweek'] = df[dt_col].dt.dayofweek
-    df['quarter'] = df[dt_col].dt.quarter
-    df['month'] = df[dt_col].dt.month
-    df['year'] = df[dt_col].dt.year
-    df['dayofyear'] = df[dt_col].dt.dayofyear
-    df['dayofmonth'] = df[dt_col].dt.day
-    df['weekofyear'] = df[dt_col].dt.isocalendar().week.astype('int32')
-
-    # X = df[['hour','dayofweek','quarter','month','year',
-    #        'dayofyear','dayofmonth','weekofyear']]
-    if target_variable:
-        y = df[target_variable]
-        return df, y
-    return df
-
-
+    return training
