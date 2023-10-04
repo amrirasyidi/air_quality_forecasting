@@ -168,6 +168,6 @@ arcgis
 models
 secrets
 experiments
-mlruns
+notebooks/mlruns
 lightning_logs
 tft_optuna_test
