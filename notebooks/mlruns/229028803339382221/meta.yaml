@@ -1,6 +1,0 @@
-artifact_location: file:///d:/0_amri_local/11_aqi_forecast/notebooks/mlruns/229028803339382221
-creation_time: 1693628460920
-experiment_id: '229028803339382221'
-last_update_time: 1693628460920
-lifecycle_stage: active
-name: mlflow_lstnet_trial

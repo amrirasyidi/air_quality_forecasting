@@ -1,6 +1,6 @@
-artifact_location: file:///d:/0_amri_local/11_aqi_forecast/notebooks/mlruns/0
-creation_time: 1693369295626
+artifact_location: file:///d:/ss_arasyidi_ds/3_aqi_forecasting/GEOAI-air_quality_forecasting_prophet/notebooks/mlruns/0
+creation_time: 1696477306754
 experiment_id: '0'
-last_update_time: 1693369295626
+last_update_time: 1696477306754
 lifecycle_stage: active
 name: Default
