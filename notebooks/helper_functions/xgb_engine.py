@@ -19,7 +19,8 @@ def xgb_train(
     val_target_series: pd.Series,
     param:Dict,
     num_round:int,
-    pruning_callbacks:List
+    patience:int=20,
+    # pruning_callbacks:List
     ):
     """train an xgboost model
 
@@ -40,17 +41,17 @@ def xgb_train(
     dval = xgb.DMatrix(val_feature_df, label=val_target_series)
 
     # Train the model
-    if pruning_callbacks:
-        xgb_model = xgb.train(param, dtrain, num_round, callbacks=pruning_callbacks)
-    else:
-        evals_result = {}
-        xgb_model = xgb.train(
-            param, dtrain, num_round,
-            evals=[(dtrain, 'train'), (dval, 'valid')],
-            early_stopping_rounds=20,
-            verbose_eval=False,
-            evals_result=evals_result
-            )
+    # if pruning_callbacks:
+    #     xgb_model = xgb.train(param, dtrain, num_round, callbacks=pruning_callbacks)
+    # else:
+    evals_result = {}
+    xgb_model = xgb.train(
+        param, dtrain, num_round,
+        evals=[(dtrain, 'train'), (dval, 'valid')],
+        early_stopping_rounds=patience,
+        verbose_eval=False,
+        evals_result=evals_result
+        )
 
     # Predict the target for the training set
     train_pred = xgb_model.predict(dtrain)

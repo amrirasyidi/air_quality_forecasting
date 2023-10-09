@@ -1,7 +1,9 @@
 from typing import List
 
+import numpy as np
 import pandas as pd
 from dateutil import parser
+
 
 # Function to convert datetime to naive datetime
 def convert_to_naive(dt):
@@ -69,3 +71,44 @@ def df_norm(
         # df[min_column_name] = df[column].min()
 
     return df, normalized_column_names
+
+def create_dt_features(
+    df: pd.DataFrame,
+    target_variable: str,
+    dt_col: str
+    ):
+    """Creates time series features from datetime index
+
+    Args:
+        df (pd.DataFrame): the dataframe which contains datetime column to be turned
+                            into time series forecasting features and target
+        target_variable (str): the target variable name
+
+    Returns:
+        X (int): Extracted values from datetime index, dataframe
+        y (int): Values of target variable, numpy array of integers
+    """
+    # df[dt_col] = df.index
+    df['hour'] = df[dt_col].dt.hour
+    df['dayofweek'] = df[dt_col].dt.dayofweek
+    df['quarter'] = df[dt_col].dt.quarter
+    df['month'] = df[dt_col].dt.month
+    df['year'] = df[dt_col].dt.year
+    df['dayofyear'] = df[dt_col].dt.dayofyear
+    df['dayofmonth'] = df[dt_col].dt.day
+    df['weekofyear'] = df[dt_col].dt.isocalendar().week.astype('int32')
+
+    # X = df[['hour','dayofweek','quarter','month','year',
+    #        'dayofyear','dayofmonth','weekofyear']]
+    if target_variable:
+        y = df[target_variable]
+        return df, y
+    return df
+
+def encode_dt_cycle(data, col):
+    # https://www.kaggle.com/code/avanwyk/encoding-cyclical-features-for-deep-learning
+    # https://harrisonpim.com/blog/the-best-way-to-encode-dates-times-and-other-cyclical-features
+    max_val = data['col'].max()
+    data[col + '_sin'] = np.sin(2 * np.pi * data[col]/max_val)
+    data[col + '_cos'] = np.cos(2 * np.pi * data[col]/max_val)
+    return data
