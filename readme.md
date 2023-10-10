@@ -5,32 +5,6 @@
 
 # Notes
 
-## forecast testing
-
-Using params as follows:
-```
-history_len = 48
-batch_size = 8 
-epochs = 10
-lr = 1e-3
-weight_decay = 0.01
-```
-
-The testing model perform quite well on the first x hours of the forecasting as can be seen in the graph below:
-![Forecasting Result](notebooks\images\prediction_result_24_hour.png "Prediction of first 24 hour")
-
-![Forecasting Result](notebooks\images\prediction_result_100_hour.png "Prediction of first 100 hour")
-
-## epa_tw exploration
-
-tbd
-
-## LSTNet
-https://github.com/Vsooong/multivariate-prediction
-https://github.com/gokulkarthik/LSTNet.pytorch/blob/master/LSTNet-For-Cryptocurrency-Market-Prediction.ipynb
-https://github.com/laiguokun/LSTNet/blob/master/models/LSTNet.py
-https://github.com/Goochaozheng/LSTNet-Attn/blob/main/models/LSTNet.py#L6
-
 ## Envs
 Create yml file
 `conda env export --no-builds | findstr -v "prefix" > environment.yml`
