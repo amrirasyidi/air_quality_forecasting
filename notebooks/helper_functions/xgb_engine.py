@@ -81,4 +81,3 @@ def xgb_predict(
     data = xgb.DMatrix(feature_df)
     # Predict the target for the val set
     return model.predict(data)
-    
